@@ -1,0 +1,24 @@
+# Azure SDK Dependencies
+azure-identity>=1.15.0
+azure-monitor-querymetrics>=1.0.0
+azure-mgmt-storage>=21.0.0
+azure-storage-blob>=12.19.0
+azure-data-tables>=12.3.0
+msal>=1.24.0
+requests>=2.31.0
+
+# Azure Management SDKs (for specific resource operations)
+# Note: azure-mgmt-apimanagement is imported but may not be actively used
+# azure-mgmt-apimanagement>=4.0.0
+
+# Configuration and Validation
+jsonschema>=4.0.0
+
+# Testing (for development)
+pytest>=7.0.0
+pytest-mock>=3.10.0
+
+# Note: azure-mgmt-monitor is NOT used per SDK rules - use azure-monitor-querymetrics instead
+# Note: Some PRD dependencies (azure-mgmt-resourcegraph, azure-mgmt-containerinstance, etc.) 
+# are for future features (Web GUI, VMSS, Container Apps) and will be added when needed
+

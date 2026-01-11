@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "time_range", "aggregation", "metrics", "service_name"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["aks"]
+    },
+    "service_name": {
+      "type": "string",
+      "description": "Service name that will be returned in CheckMK response"
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "AKS cluster name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "time_range": {
+      "type": "string",
+      "pattern": "^PT\\d+[MHD]$",
+      "description": "ISO 8601 duration format used for both time range and granularity (e.g., PT1H, PT5M)"
+    },
+    "aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max",
+      "description": "Aggregation type applied to all metrics unless overridden"
+    },
+    "metadata_aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+      "description": "Aggregation type for combining grouped metadata values. If not specified, defaults to 'aggregation' field. Applies to all metrics unless overridden per metric. Can only be defined when group_by_metadata is defined."
+    },
+    "group_by_metadata": {
+      "type": "string",
+      "enum": ["node", "nodepool"],
+      "$comment": "Available values: node, nodepool. Required when filter_metadata_values or metadata_aggregation is defined.",
+      "description": "Metadata field to group by. Supported values: node (default), nodepool. Applies to all metrics unless overridden per metric. Required when filter_metadata_values or metadata_aggregation is defined."
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/definitions/aksMetricConfig"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "aksMetricConfig": {
+      "type": "object",
+      "required": ["enabled", "type"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["not_ready_nodes", "node_cpu_percent", "node_memory_percent", "node_disk_percent"],
+          "$comment": "Available values: not_ready_nodes, node_cpu_percent, node_memory_percent, node_disk_percent",
+          "description": "Metric type identifier"
+        },
+        "time_range": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common time_range (used for both time range and granularity)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation"
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+          "description": "Optional override for common metadata_aggregation. If not specified, falls back to metric-level aggregation, then root-level metadata_aggregation, then root-level aggregation. Can only be defined when group_by_metadata is defined."
+        },
+        "group_by_metadata": {
+          "type": "string",
+          "enum": ["node", "nodepool"],
+          "$comment": "Available values: node, nodepool. Required when filter_metadata_values or metadata_aggregation is defined.",
+          "description": "Optional override for common group_by_metadata. Supported values: node (default), nodepool. Required when filter_metadata_values or metadata_aggregation is defined."
+        },
+        "filter_metadata_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "$comment": "Can only be defined when group_by_metadata is defined. Array of metadata values to filter by. Supports wildcards (e.g., ['*'] for all values).",
+          "description": "Array of metadata values to filter by. Supports wildcards (e.g., ['*'] for all values). Can only be defined when group_by_metadata is defined."
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "filter_metadata_values": {}
+                },
+                "required": ["filter_metadata_values"]
+              },
+              {
+                "properties": {
+                  "metadata_aggregation": {}
+                },
+                "required": ["metadata_aggregation"]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "group_by_metadata": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["group_by_metadata"]
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "filter_metadata_values": {}
+            },
+            "required": ["filter_metadata_values"]
+          },
+          {
+            "properties": {
+              "metadata_aggregation": {}
+            },
+            "required": ["metadata_aggregation"]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "group_by_metadata": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["group_by_metadata"]
+      }
+    }
+  ]
+}
+

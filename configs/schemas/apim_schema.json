@@ -1,0 +1,259 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "time_range", "aggregation", "metrics", "service_name"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["apim"]
+    },
+    "service_name": {
+      "type": "string",
+      "description": "Service name that will be returned in CheckMK response"
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "APIM service name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "time_range": {
+      "type": "string",
+      "pattern": "^PT\\d+[MHD]$",
+      "description": "ISO 8601 duration format used for both time range and granularity (e.g., PT1H, PT5M)"
+    },
+    "aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max",
+      "description": "Aggregation type applied to all metrics unless overridden"
+    },
+    "metadata_aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+      "description": "Aggregation type for combining grouped metadata values. If not specified, defaults to 'aggregation' field. Applies to all metrics unless overridden per metric. Can only be defined when group_by_metadata is defined."
+    },
+    "group_by_metadata": {
+      "type": "string",
+      "enum": ["ApiId", "GatewayResponseCodeCategory", "GatewayResponseCode"],
+      "$comment": "Available values: ApiId, GatewayResponseCodeCategory, GatewayResponseCode. Required when metadata_aggregation is defined.",
+      "description": "Optional metadata key for grouping metrics. Supported values: ApiId (default), GatewayResponseCodeCategory, GatewayResponseCode. Applies to all metrics unless overridden per metric. Required when metadata_aggregation is defined."
+    },
+    "api_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of API IDs to monitor (empty array = all APIs). Can be overridden per metric."
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "oneOf": [
+            {"$ref": "#/definitions/apimMetricConfig"},
+            {"$ref": "#/definitions/requestsByCodesConfig"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "apimMetricConfig": {
+      "type": "object",
+      "required": ["enabled", "type"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["request_count", "requests_2xx", "requests_4xx", "requests_5xx"],
+          "$comment": "Available values: request_count, requests_2xx, requests_4xx, requests_5xx",
+          "description": "Metric type identifier"
+        },
+        "time_range": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common time_range (used for both time range and granularity)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation"
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+          "description": "Optional override for common metadata_aggregation. If not specified, falls back to metric-level aggregation, then root-level metadata_aggregation, then root-level aggregation. Can only be defined when group_by_metadata is defined."
+        },
+        "group_by_metadata": {
+          "type": "string",
+          "enum": ["ApiId", "GatewayResponseCodeCategory", "GatewayResponseCode"],
+          "$comment": "Available values: ApiId, GatewayResponseCodeCategory, GatewayResponseCode. Required when metadata_aggregation is defined.",
+          "description": "Optional override for common group_by_metadata. Supported values: ApiId (default), GatewayResponseCodeCategory, GatewayResponseCode. Required when metadata_aggregation is defined."
+        },
+        "api_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional override for common api_ids"
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "group_by_metadata": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["group_by_metadata"]
+          },
+          "then": {
+            "properties": {
+              "metadata_aggregation": {
+                "type": "string",
+                "enum": ["average", "sum", "count", "min", "max"]
+              }
+            },
+            "required": ["metadata_aggregation"]
+          }
+        }
+      ]
+    },
+    "requestsByCodesConfig": {
+      "type": "object",
+      "required": ["enabled", "type", "response_codes"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["requests_by_codes"],
+          "$comment": "Available values: requests_by_codes",
+          "description": "Metric type identifier"
+        },
+        "time_range": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common time_range (used for both time range and granularity)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation"
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+          "description": "Optional override for common metadata_aggregation. If not specified, falls back to metric-level aggregation, then root-level metadata_aggregation, then root-level aggregation. Can only be defined when group_by_metadata is defined."
+        },
+        "group_by_metadata": {
+          "type": "string",
+          "enum": ["ApiId", "GatewayResponseCodeCategory", "GatewayResponseCode"],
+          "$comment": "Available values: ApiId, GatewayResponseCodeCategory, GatewayResponseCode. Required when metadata_aggregation is defined.",
+          "description": "Optional override for common group_by_metadata. Supported values: ApiId (default), GatewayResponseCodeCategory, GatewayResponseCode. Required when metadata_aggregation is defined."
+        },
+        "api_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional override for common api_ids"
+        },
+        "response_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{3}$"
+          },
+          "minItems": 1
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "metadata_aggregation": {}
+            },
+            "required": ["metadata_aggregation"]
+          },
+          "then": {
+            "properties": {
+              "group_by_metadata": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["group_by_metadata"]
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "metadata_aggregation": {}
+        },
+        "required": ["metadata_aggregation"]
+      },
+      "then": {
+        "properties": {
+          "group_by_metadata": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["group_by_metadata"]
+      }
+    }
+  ]
+}

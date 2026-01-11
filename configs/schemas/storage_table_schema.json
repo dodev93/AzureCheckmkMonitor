@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "metrics"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["storage_table"]
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "Storage account name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "oneOf": [
+            {"$ref": "#/definitions/tableExistenceConfig"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "tableExistenceConfig": {
+      "type": "object",
+      "required": ["enabled", "type"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["table_existence"],
+          "description": "Metric type identifier"
+        },
+        "filtered_tables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "List of table names that must exist. Missing tables will result in CRIT status. Required when list_all is false or not specified."
+        },
+        "list_all": {
+          "type": "boolean",
+          "description": "If true, count all tables in the storage account. If false or not specified, filtered_tables is required."
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "list_all": {
+              "const": true
+            }
+          }
+        },
+        {
+          "required": ["filtered_tables"]
+        }
+      ]
+    }
+  }
+}
+

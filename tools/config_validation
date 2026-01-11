@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Execute validation scripts
+venv/bin/python src/validation/validate_config.py "examples/configs/aks_basic.json" "configs/schemas/aks_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/servicebus_basic.json" "configs/schemas/servicebus_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/servicebus_specific_queues.json" "configs/schemas/servicebus_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_specific_codes_groups.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_all_apis.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_errors_only.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_single_api.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_specific_apis.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/apim_specific_codes_groups.json" "configs/schemas/apim_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_account_basic.json" "configs/schemas/storage_account_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_account_blob_only.json" "configs/schemas/storage_account_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_account_multi_service.json" "configs/schemas/storage_account_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_blob_basic.json" "configs/schemas/storage_blob_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_blob_comprehensive.json" "configs/schemas/storage_blob_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_table_basic.json" "configs/schemas/storage_table_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/storage_table_filtered.json" "configs/schemas/storage_table_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/secrets_certificates_only.json" "configs/schemas/secrets_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/secrets_multiple_apps.json" "configs/schemas/secrets_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/secrets_secrets_only.json" "configs/schemas/secrets_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/secrets_single_app_by_name.json" "configs/schemas/secrets_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/secrets_single_app.json" "configs/schemas/secrets_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/container_apps_basic.json" "configs/schemas/container_apps_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/container_apps_cpu_memory_only.json" "configs/schemas/container_apps_schema.json"
+venv/bin/python src/validation/validate_config.py "examples/configs/container_apps_restarts_only.json" "configs/schemas/container_apps_schema.json"
+
+EXIT_CODE=$?
+exit $EXIT_CODE
+

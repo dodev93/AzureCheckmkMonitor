@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "metrics"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["servicebus"]
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "Service Bus namespace name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "group_by_metadata": {
+      "type": "string",
+      "enum": ["EntityName"],
+      "$comment": "Available values: EntityName. Required when filter_metadata_values or metadata_aggregation is defined.",
+      "description": "Optional metadata key for grouping metrics. Supported value: EntityName (default). Applies to all metrics unless overridden per metric. Required when filter_metadata_values or metadata_aggregation is defined."
+    },
+    "filter_metadata_values": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "$comment": "Can only be defined when group_by_metadata is defined. Array of metadata values to filter by (e.g., ['queue1', 'queue2']).",
+      "description": "Optional array of metadata values to filter by (e.g., ['queue1', 'queue2']) - applies to all metrics unless overridden per metric. Can only be defined when group_by_metadata is defined."
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/definitions/metricConfig"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "filter_metadata_values": {
+                "not": {"type": "null"}
+              }
+            },
+            "required": ["filter_metadata_values"]
+          },
+          {
+            "properties": {
+              "metadata_aggregation": {}
+            },
+            "required": ["metadata_aggregation"]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "group_by_metadata": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["group_by_metadata"]
+      }
+    }
+  ],
+  "definitions": {
+    "metricConfig": {
+      "type": "object",
+      "required": ["enabled", "type"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["incoming_requests", "server_errors", "deadletter_messages", "active_messages", "size"],
+          "description": "Metric type identifier"
+        },
+        "time_range": {
+          "$ref": "#/definitions/timeRange",
+          "description": "Optional override for common time_range"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation"
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+          "description": "Aggregation type for combining grouped metadata values. If not specified, defaults to 'aggregation' field. Can only be defined when group_by_metadata is defined."
+        },
+        "group_by_metadata": {
+          "type": "string",
+          "enum": ["EntityName"],
+          "$comment": "Available values: EntityName. Required when filter_metadata_values or metadata_aggregation is defined.",
+          "description": "Optional override for common group_by_metadata. Supported value: EntityName (default). Required when filter_metadata_values or metadata_aggregation is defined."
+        },
+        "filter_metadata_values": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "$comment": "Can only be defined when group_by_metadata is defined. Array of metadata values to filter by (overrides root-level filter_metadata_values if specified).",
+          "description": "Optional array of metadata values to filter by (overrides root-level filter_metadata_values if specified). Can only be defined when group_by_metadata is defined."
+        },
+        "granularity": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common granularity"
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "filter_metadata_values": {
+                    "not": {"type": "null"}
+                  }
+                },
+                "required": ["filter_metadata_values"]
+              },
+              {
+                "properties": {
+                  "metadata_aggregation": {}
+                },
+                "required": ["metadata_aggregation"]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "group_by_metadata": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["group_by_metadata"]
+          }
+        }
+      ]
+    },
+    "timeRange": {
+      "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "hours": { "type": "number", "minimum": 0 }
+          },
+          "required": ["hours"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "minutes": { "type": "number", "minimum": 0 }
+          },
+          "required": ["minutes"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "days": { "type": "number", "minimum": 0 }
+          },
+          "required": ["days"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
+

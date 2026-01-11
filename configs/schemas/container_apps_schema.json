@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "metrics"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["container_apps"]
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "Container App name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/definitions/metricConfig"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "metricConfig": {
+      "type": "object",
+      "required": ["enabled", "type"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["restarts", "cpu_percentage", "memory_percentage", "response_time"],
+          "description": "Metric type identifier"
+        },
+        "time_range": {
+          "$ref": "#/definitions/timeRange",
+          "description": "Optional override for common time_range"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation"
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Aggregation type for combining grouped metadata values. If not specified, defaults to 'aggregation' field."
+        },
+        "granularity": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common granularity"
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeRange": {
+      "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "hours": { "type": "number", "minimum": 0 }
+          },
+          "required": ["hours"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "minutes": { "type": "number", "minimum": 0 }
+          },
+          "required": ["minutes"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "days": { "type": "number", "minimum": 0 }
+          },
+          "required": ["days"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
+

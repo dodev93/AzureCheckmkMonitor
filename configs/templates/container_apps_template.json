@@ -1,0 +1,41 @@
+{
+  "resource_type": "container_apps",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<app-name>",
+  "location": "polandcentral",
+  "time_range": "PT1H",
+  "aggregation": "average",
+  "metrics": {
+    "restarts": {
+      "enabled": true,
+      "aggregation": "sum",
+      "warn_threshold": 5,
+      "crit_threshold": 10,
+      "min": 0,
+      "max": null
+    },
+    "cpu_percentage": {
+      "enabled": true,
+      "warn_threshold": 80,
+      "crit_threshold": 95,
+      "min": 0,
+      "max": 100
+    },
+    "memory_percentage": {
+      "enabled": true,
+      "warn_threshold": 80,
+      "crit_threshold": 95,
+      "min": 0,
+      "max": 100
+    },
+    "response_time": {
+      "enabled": true,
+      "warn_threshold": 500,
+      "crit_threshold": 1000,
+      "min": 0,
+      "max": null
+    }
+  }
+}
+

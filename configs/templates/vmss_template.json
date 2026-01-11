@@ -1,0 +1,28 @@
+{
+  "resource_type": "vmss",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<vmss-name>",
+  "location": "polandcentral",
+  "time_range": "PT1H",
+  "aggregation": "average",
+  "metrics": {
+    "available_memory_percent": {
+      "enabled": true,
+      "aggregate_instances": true,
+      "warn_threshold": 20,
+      "crit_threshold": 10,
+      "min": 0,
+      "max": 100
+    },
+    "cpu_percent": {
+      "enabled": true,
+      "aggregate_instances": true,
+      "warn_threshold": 80,
+      "crit_threshold": 95,
+      "min": 0,
+      "max": 100
+    }
+  }
+}
+

@@ -1,0 +1,15 @@
+{
+  "resource_type": "storage_table",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<account-name>",
+  "location": "polandcentral",
+  "metrics": {
+    "table_count": {
+      "type": "table_existence",
+      "enabled": true,
+      "filtered_tables": ["Table1", "Table2"]
+    }
+  }
+}
+

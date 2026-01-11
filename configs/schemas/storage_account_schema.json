@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "time_range", "aggregation", "metrics"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["storage_account"]
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "Storage account name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region (optional - retrieved from storage account properties if not provided)"
+    },
+    "resource_id": {
+      "type": "string",
+      "description": "Full Azure resource ID (optional - will be built from subscription_id, resource_group, resource_name if not provided)"
+    },
+    "group_by_metadata": {
+      "type": "string",
+      "$comment": "Common values: ApiName (recommended for transactions), OperationName, Tier (recommended for blob capacity). Required when filter_metadata_values or metadata_aggregation is defined.",
+      "description": "Optional metadata key for grouping metrics. Common values: ApiName (recommended for transactions), OperationName, Tier (recommended for blob capacity). Applies to all metrics unless overridden per metric. Required when filter_metadata_values or metadata_aggregation is defined."
+    },
+    "filter_metadata_values": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "$comment": "Can only be defined when group_by_metadata is defined. Array of metadata values to filter by (e.g., ['Blob', 'Table']).",
+      "description": "Optional array of metadata values to filter by (e.g., ['Blob', 'Table']) - applies to all metrics unless overridden per metric. Can only be defined when group_by_metadata is defined."
+    },
+    "service_name": {
+      "type": "string",
+      "description": "Service name that will be returned in CheckMK response"
+    },
+    "time_range": {
+      "type": "string",
+      "pattern": "^PT\\d+[MHD]$",
+      "description": "ISO 8601 duration format used for both time range and granularity (e.g., PT1H, PT5M)"
+    },
+    "aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max",
+      "description": "Aggregation type applied to all metrics unless overridden. Recommended: 'average' for capacity (bytes), 'sum' for transactions (count)."
+    },
+    "metadata_aggregation": {
+      "type": "string",
+      "enum": ["average", "sum", "count", "min", "max"],
+      "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+      "description": "Aggregation type for combining grouped metadata values. If not specified, defaults to 'aggregation' field. Applies to all metrics unless overridden per metric. Can only be defined when group_by_metadata is defined."
+    },
+    "metrics": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/definitions/storageMetricConfig"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "storageMetricConfig": {
+      "type": "object",
+      "required": ["enabled", "type", "scope"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["capacity", "transactions"],
+          "$comment": "Available values: capacity, transactions",
+          "description": "Metric type identifier. 'capacity': Unit is bytes, recommended aggregation is 'average'. 'transactions': Unit is count, recommended aggregation is 'sum', recommended group_by_metadata is 'ApiName'."
+        },
+        "time_range": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$",
+          "description": "Optional override for common time_range (used for both time range and granularity)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max",
+          "description": "Optional override for common aggregation. Recommended: 'average' for capacity (bytes), 'sum' for transactions (count)."
+        },
+        "metadata_aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max. Can only be defined when group_by_metadata is defined.",
+          "description": "Optional override for common metadata_aggregation. If not specified, falls back to metric-level aggregation, then root-level metadata_aggregation, then root-level aggregation. Can only be defined when group_by_metadata is defined."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["account", "Blob", "Table", "Queue", "File"],
+          "$comment": "Available values: account, Blob, Table, Queue, File",
+          "description": "Scope for metrics. Use 'Blob' for blob storage metrics, 'Table' for table storage metrics, 'account' for account-level aggregation."
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        },
+        "group_by_metadata": {
+          "type": "string",
+          "$comment": "Common values: ApiName (recommended for transactions), OperationName, Tier (recommended for blob capacity). Required when filter_metadata_values or metadata_aggregation is defined.",
+          "description": "Optional metadata key for grouping (overrides root-level group_by_metadata if specified). Common values: ApiName (recommended for transactions), OperationName, Tier (recommended for blob capacity). Required when filter_metadata_values or metadata_aggregation is defined."
+        },
+        "filter_metadata_values": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "$comment": "Can only be defined when group_by_metadata is defined. Array of metadata values to filter by (overrides root-level filter_metadata_values if specified).",
+          "description": "Optional array of metadata values to filter by (overrides root-level filter_metadata_values if specified). Can only be defined when group_by_metadata is defined."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "filter_metadata_values": {
+                    "not": {"type": "null"}
+                  }
+                },
+                "required": ["filter_metadata_values"]
+              },
+              {
+                "properties": {
+                  "metadata_aggregation": {}
+                },
+                "required": ["metadata_aggregation"]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "group_by_metadata": {
+                "type": "string"
+              }
+            },
+            "required": ["group_by_metadata"]
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "filter_metadata_values": {
+                "not": {"type": "null"}
+              }
+            },
+            "required": ["filter_metadata_values"]
+          },
+          {
+            "properties": {
+              "metadata_aggregation": {}
+            },
+            "required": ["metadata_aggregation"]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "group_by_metadata": {
+            "type": "string"
+          }
+        },
+        "required": ["group_by_metadata"]
+      }
+    }
+  ]
+}

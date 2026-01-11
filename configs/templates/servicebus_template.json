@@ -1,0 +1,55 @@
+{
+  "resource_type": "servicebus",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<namespace-name>",
+  "location": "polandcentral",
+  "time_range": "PT1H",
+  "aggregation": "sum",
+  "metrics": {
+    "incoming_requests": {
+      "type": "incoming_requests",
+      "enabled": true,
+      "warn_threshold": 100,
+      "crit_threshold": 500,
+      "min": 0,
+      "max": null
+    },
+    "server_errors": {
+      "type": "server_errors",
+      "enabled": true,
+      "warn_threshold": 5,
+      "crit_threshold": 20,
+      "min": 0,
+      "max": null
+    },
+    "deadletter_messages": {
+      "type": "deadletter_messages",
+      "enabled": true,
+      "aggregation": "average",
+      "warn_threshold": 10,
+      "crit_threshold": 50,
+      "min": 0,
+      "max": null
+    },
+    "active_messages": {
+      "type": "active_messages",
+      "enabled": true,
+      "aggregation": "average",
+      "warn_threshold": 1000,
+      "crit_threshold": 5000,
+      "min": 0,
+      "max": null
+    },
+    "size": {
+      "type": "size",
+      "enabled": true,
+      "aggregation": "average",
+      "warn_threshold": 104857600,
+      "crit_threshold": 524288000,
+      "min": 0,
+      "max": null
+    }
+  }
+}
+

@@ -1,0 +1,457 @@
+---
+alwaysApply: false
+---
+
+All monitoring modules must be implemented using common patterns.
+
+## 1. Base Class Structure
+
+**Important:** Modules that use `azure-monitor-querymetrics` SDK must inherit from `BaseMonitor`. Modules that use other Azure SDKs (e.g., Microsoft Graph API, Azure Storage SDK) do not need to inherit from `BaseMonitor` and can implement their own authentication and client management.
+
+### 1.1 Base Monitor Class
+
+Create a base class `BaseMonitor` in `src/azurechecks/monitors/base_monitor.py`:
+
+```python
+class BaseMonitor:
+    """Base class for all Azure resource monitoring modules."""
+    
+    def __init__(self):
+        """Initialize base monitor with lazy-loaded clients and credentials."""
+        # Lazy-loaded clients and credentials
+        self._metrics_client = None
+        self._credentials = None
+    
+    def get_credentials(self):
+        """
+        Get Azure Service Principal credentials from environment variables.
+        
+        Returns:
+            ClientSecretCredential: Authenticated credential object
+            
+        Raises:
+            AzureAuthError: If required environment variables are missing
+        """
+        # Implementation reads AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
+        # from environment variables and returns ClientSecretCredential
+        pass
+    
+    def _get_metrics_client(self, location: str):
+        """
+        Get or create metrics client (lazy initialization).
+        
+        Args:
+            location: Azure resource location (e.g., 'westeurope', 'eastus')
+            
+        Returns:
+            MetricsClient: Authenticated metrics client
+        """
+        # Implementation uses MonitorUtils.get_metrics_endpoint(location) to get endpoint
+        # Creates MetricsClient with endpoint and credentials
+        # Uses lazy initialization - creates client only once
+        pass
+    
+    @staticmethod
+    def build_resource_id(config: Dict[str, Any]) -> str:
+        """
+        Build Azure resource ID from configuration.
+        
+        Args:
+            config: Configuration dictionary containing:
+                - resource_type: str
+                - subscription_id: str
+                - resource_group: str
+                - resource_name: str
+        
+        Returns:
+            Full Azure resource ID string
+        
+        Raises:
+            ConfigValidationError: If resource_type is unsupported or required fields are missing
+        """
+        # Implementation should use config_validator.build_resource_id()
+        pass
+    
+    def _extract_problems(
+        self,
+        breakdown_dict: Dict[str, float],
+        metadata_key: str,
+        warn_threshold: Optional[float],
+        crit_threshold: Optional[float]
+    ) -> List[MetricProblem]:
+        """
+        Extract problematic metadata values that exceed thresholds.
+        
+        This is a common method used by all monitoring modules to identify
+        problematic metadata values (e.g., ApiId, OperationName) that exceed thresholds.
+        
+        Args:
+            breakdown_dict: Dictionary mapping metadata values to metric values
+            metadata_key: The metadata key used for grouping (e.g., 'ApiId', 'OperationName')
+            warn_threshold: Warning threshold
+            crit_threshold: Critical threshold
+        
+        Returns:
+            List of MetricProblem instances for values that exceed thresholds
+        """
+        # Implementation should evaluate each value against thresholds
+        # and return MetricProblem instances for problematic values
+        pass
+```
+
+### 1.2 Module-Specific Monitor Class
+
+**For modules using azure-monitor-querymetrics:** Each monitoring module must have a monitor class (e.g., `APIMMonitor`, `StorageAccountMonitor`) that inherits from `BaseMonitor`.
+
+**For modules using other SDKs:** Modules like `SecretsMonitor` (uses Microsoft Graph API) or `StorageBlobMonitor` (uses azure-storage-blob SDK) do not need to inherit from `BaseMonitor` and implement their own authentication and client management.
+
+**Note for non-inheriting modules:** If a module needs to build resource IDs, it should use the static method `BaseMonitor.build_resource_id(config)` instead of inheriting from `BaseMonitor`. Example:
+```python
+from .base_monitor import BaseMonitor  # For build_resource_id static method
+
+class StorageBlobMonitor:
+    def __init__(self, config: Dict[str, Any]):
+        # Build resource_id using static method from BaseMonitor
+        self.resource_id = BaseMonitor.build_resource_id(config)
+        # ... other initialization
+```
+
+```python
+class APIMMonitor(BaseMonitor):
+    """Azure API Management (APIM) Monitor class."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize monitor from configuration dictionary.
+        
+        Args:
+            config: Full configuration dictionary containing:
+                - resource_id: str (or will be built from subscription_id, resource_group, resource_name)
+                - location: str (if required by resource type)
+                - Additional resource-specific fields
+        """
+        # Initialize base class (sets up _metrics_client and _credentials)
+        super().__init__()
+        
+        # Extract resource_id from config or build it
+        self.resource_id = self.build_resource_id(config)
+        # Extract other required fields (e.g., location, container_name)
+        self.location = config.get('location')
+        # ... other fields
+        
+        # Resource-specific attributes can be added here if needed
+```
+
+## 2. Metric Type Enum
+
+Each monitoring module must define a per-module enum for metric types:
+
+```python
+from enum import Enum
+
+class APIMetricType(Enum):
+    """Enumeration of supported APIM metric types."""
+    REQUEST_COUNT = "request_count"
+    REQUESTS_2XX = "requests_2xx"
+    REQUESTS_4XX = "requests_4xx"
+    REQUESTS_5XX = "requests_5xx"
+    REQUESTS_BY_CODES = "requests_by_codes"
+```
+
+The enum values must match the string values used in configuration files.
+
+## 3. Metric Methods Map
+
+Each monitor class must have a class-level or instance-level field mapping metric types to methods:
+
+```python
+class APIMMonitor(BaseMonitor):
+    def _get_metric_methods(self) -> Dict[APIMetricType, Callable]:
+        """
+        Get mapping of metric types to method references.
+        
+        Returns:
+            Dictionary mapping enum values to method references
+        """
+        return {
+            APIMetricType.REQUEST_COUNT: self.monitor_request_count,
+            APIMetricType.REQUESTS_2XX: self.monitor_requests_2xx,
+            APIMetricType.REQUESTS_4XX: self.monitor_requests_4xx,
+            APIMetricType.REQUESTS_5XX: self.monitor_requests_5xx,
+            APIMetricType.REQUESTS_BY_CODES: self.monitor_requests_by_codes
+        }
+```
+
+## 4. Unsupported Metric Type Exception
+
+Define a custom exception for unsupported metric types:
+
+```python
+class UnsupportedMetricTypeError(Exception):
+    """Raised when a metric type is not supported by the monitoring module."""
+    
+    def __init__(self, metric_name: str, metric_type: str, supported_types: List[str]):
+        self.metric_name = metric_name
+        self.metric_type = metric_type
+        self.supported_types = supported_types
+        message = (
+            f"Unsupported metric type '{metric_type}' for metric '{metric_name}'. "
+            f"Supported types: {', '.join(supported_types)}"
+        )
+        super().__init__(message)
+```
+
+**Note**: The function signature no longer takes `resource_id` as a separate parameter. Resource ID is extracted from config in the constructor.
+
+## 6. Metric Query Methods
+
+### 6.1 Core Query Method
+
+- Method name: `query_metric_with_breakdown()`
+- Uses `azure.monitor.querymetrics.MetricsClient.query_resources()` to query metrics
+- **CRITICAL**: This method must be called exactly once per metric configuration. Do not make multiple Azure SDK calls for the same metric.
+- Parameters:
+  - `resource_id: str` - Full Azure resource ID
+  - `location: str` - Azure resource location
+  - `metric_name: str` - Azure metric name
+  - `metric_namespace: str` - Azure Monitor metric namespace
+  - `timespan: timedelta` - Time span for query
+  - `aggregation: str` - Aggregation type ('sum', 'average', 'count', 'min', 'max')
+  - `granularity: timedelta` - Time granularity
+  - `filter_str: Optional[str]` - Optional filter string
+  - `metadata_key: Optional[str]` - Optional metadata key for breakdown
+  - `metadata_aggregation: Optional[str]` - Optional aggregation type for combining grouped metadata values. **Precedence**: If specified, uses this value; if None, defaults to `aggregation` parameter. Valid values: 'sum', 'average', 'count', 'min', 'max'
+  - `debug: bool` - Optional debug flag (default: False). When True, enables debug output for Azure SDK queries
+- Returns: `Tuple[Optional[float], Dict[str, float]]` - (aggregated_value, breakdown_dict)
+  - `breakdown_dict` maps metadata values to metric values (e.g., `{'api-id-1': 100, 'api-id-2': 200}`)
+  - When metadata breakdown exists, `aggregated_value` is calculated using `metadata_aggregation` (or `aggregation` if not specified):
+    - 'sum' or 'count': sums all breakdown_dict values
+    - 'average': calculates average of breakdown_dict values
+    - 'min': finds minimum value in breakdown_dict
+    - 'max': finds maximum value in breakdown_dict
+- Maps aggregation strings to `MetricAggregationType` enum values
+- Caps granularity using `MonitorUtils.cap_granularity()` if needed
+
+**Note:** Modules can override this method to add resource-specific logic (e.g., Storage Account adds `scope` parameter for service-level namespaces).
+
+### 6.2 Metric-Specific Monitor Methods
+
+Each metric type has its own method:
+- Method signature: `monitor_<metric_name>(self, config: Dict[str, Any], metric_name: str, debug: bool = False) -> Tuple[Metric, Optional[List[MetricProblem]]]`
+- Examples: `monitor_request_count()`, `monitor_capacity()`, `monitor_transactions()`
+- These methods:
+  1. Extract configuration from `config` dict
+  2. Parse time ranges using `MonitorUtils.iso8601_to_timedelta()`
+  3. Build filter strings if needed
+  4. **Call the core query method exactly once** (one Azure SDK call per metric)
+  5. Extract thresholds from config
+  6. Check for `group_by_metadata` field in config:
+     - If present, use `_extract_problems()` to identify problematic values
+     - Return tuple: `(Metric, List[MetricProblem])`
+  7. If no grouping, return tuple: `(Metric, None)`
+- **Return Type**: Always returns a tuple `(Metric, Optional[List[MetricProblem]])`
+
+## 7. Metadata Grouping
+
+### 7.1 Configuration
+
+Metrics can optionally be grouped by metadata fields from Azure SDK responses. The `group_by_metadata` field can be specified at the root level (applies to all metrics) or per-metric (overrides root-level setting):
+
+**Root-level configuration (applies to all metrics):**
+```json
+{
+  "group_by_metadata": "ApiId",
+  "metrics": {
+    "apim_request_count": {
+      "type": "request_count",
+      "enabled": true,
+      "warn_threshold": 100,
+      "crit_threshold": 500
+    }
+  }
+}
+```
+
+**Per-metric configuration (overrides root-level):**
+```json
+{
+  "group_by_metadata": "ApiId",
+  "metrics": {
+    "apim_request_count": {
+      "type": "request_count",
+      "enabled": true,
+      "group_by_metadata": "OperationName",  // Overrides root-level "ApiId"
+      "warn_threshold": 100,
+      "crit_threshold": 500
+    }
+  }
+}
+```
+
+**Note:** If `group_by_metadata` is not specified at root level or per-metric, no metadata grouping will be performed for that metric.
+
+**Metadata Aggregation:**
+- The `metadata_aggregation` field controls how grouped metadata values are combined into the final aggregated value
+- Can be specified at root level (applies to all metrics) or per-metric (overrides root level)
+- If not specified, defaults to the `aggregation` field value
+- Valid values: `"sum"`, `"average"`, `"count"`, `"min"`, `"max"` (same as aggregation types)
+- Precedence: metric-level `metadata_aggregation` > root-level `metadata_aggregation` > `aggregation` field
+- Use cases:
+  - `"sum"` - For metrics like storage capacity where you want to sum values from all tiers/nodes
+  - `"average"` - For metrics like CPU usage percentages where summing would be incorrect (e.g., 50% + 60% = 110%)
+  - `"max"` - For metrics where you want the maximum value across grouped items
+  - `"min"` - For metrics where you want the minimum value across grouped items
+
+### 7.2 Grouping Logic
+
+- Grouping logic is implemented in the base class method `_extract_problems()`
+- When `group_by_metadata` is specified:
+  - The breakdown_dict from the query result is used
+  - Each metadata value is evaluated against thresholds
+  - Problematic values are identified and returned as `MetricProblem` instances
+  - **Only a single Metric is generated** (not multiple metrics per metadata value)
+  - Problematic metadata values are included in the result message via `MetricResult.problems`
+
+### 7.3 MetricProblem Class
+
+The `MetricProblem` class is defined in `checkmk_formatter.py`:
+
+```python
+@dataclass
+class MetricProblem:
+    """Represents a problematic metadata value that exceeds thresholds."""
+    problem_name: str  # The metadata value (e.g., "api-id-1", "PutBlob")
+    problem_value: Optional[float] = None  # The problematic metric value (None if problem_message is used)
+    metadata_key: Optional[str] = None  # The metadata key used (e.g., "ApiId", "OperationName")
+    problem_message: Optional[str] = None  # Human-readable problem message (used when problem_value is None)
+```
+
+## 8. Main Monitor Method
+
+### 8.1 Method Signature
+
+- `monitor(self, config: Dict[str, Any], debug: bool = False) -> MetricResult`
+- This is the orchestrator method that runs all enabled metrics
+
+### 8.2 Implementation Pattern
+
+1. Extract `metrics_config` from `config.get('metrics', {})`
+2. Extract common configuration (time_range, aggregation, service_name, group_by_metadata, etc.)
+3. Get metric methods map using `_get_metric_methods()`
+4. Iterate over `metrics_config.items()`:
+   - Skip if `metric_config.get('enabled', False)` is False
+   - Get `metric_type_str` from `metric_config.get('type')`
+   - Convert string to enum value (e.g., `APIMetricType(metric_type_str)`)
+   - Verify enum value exists in metric methods map
+   - **If not found, raise `UnsupportedMetricTypeError`** with metric name, type, and supported types
+   - Merge common config with metric-specific config (metric config overrides)
+   - **Time the metric execution if `debug` is True:**
+     ```python
+     start_time = time.time() if debug else None
+     ```
+   - Call the metric method with merged config, Checkmk metric name, and debug flag:
+     ```python
+     metric, problems = metric_method(merged_config, checkmk_metric_name, debug=debug)
+     ```
+   - Collect returned `Metric` and `Optional[List[MetricProblem]]`:
+     - Add `Metric` to `all_metrics`
+     - If `MetricProblem` list is not None, add to `all_problems`
+   - **Print execution time if `debug` is True:**
+     ```python
+     if debug and start_time is not None:
+         execution_time = time.time() - start_time
+         print(f"Metric '{checkmk_metric_name}' execution time: {execution_time:.3f}s", file=sys.stderr)
+     ```
+   - **Do not catch exceptions** - let them propagate to `generic_check.py` which handles them
+5. Return `MetricResult` with:
+   - `service_name` from config
+   - List of all collected `Metric` instances
+   - `problems: Optional[List[MetricProblem]]` (aggregated from all metrics)
+
+## 9. Return Type
+
+All monitoring methods must return `MetricResult` from `checkmk_formatter`:
+- Import: `from .checkmk_formatter import Metric, MetricResult, MetricProblem`
+- `MetricResult` contains:
+  - `service_name: Optional[str]`
+  - `metrics: List[Metric]`
+  - `problems: Optional[List[MetricProblem]]` - List of problematic metadata values that exceed thresholds
+  - `status: Union[int, str]` - Computed status (property, 0=OK, 1=WARN, 2=CRIT, 3=UNKNOWN, "P"=calculated by Checkmk)
+  - `message: str` - Computed human-readable message (property)
+
+## 10. Configuration Structure
+
+Expected config dictionary structure:
+```python
+{
+    'resource_type': str,  # Required for resource ID generation
+    'subscription_id': str,  # Required for resource ID generation
+    'resource_group': str,  # Required for resource ID generation
+    'resource_name': str,  # Required for resource ID generation
+    'location': str,  # If required by resource type
+    'time_range': str,  # ISO 8601 duration (e.g., 'PT1H')
+    'aggregation': str,  # 'sum', 'average', 'count', 'min', 'max'
+    'metadata_aggregation': Optional[str],  # Optional aggregation type for combining grouped metadata values (defaults to 'aggregation')
+    'filter_metadata_values': Optional[List[str]],  # Optional list of metadata values to filter by
+    'service_name': str,  # Optional
+    'group_by_metadata': Optional[str],  # Optional metadata key for grouping (applies to all metrics unless overridden)
+    'metrics': {
+        '<checkmk_metric_name>': {
+            'enabled': bool,
+            'type': str,  # Must match enum value in metric_methods
+            'group_by_metadata': Optional[str],  # Optional metadata key for grouping (overrides root-level if specified)
+            # Metric-specific config (may override common config)
+        }
+    }
+}
+```
+
+**Note:** The `group_by_metadata` and `metadata_aggregation` fields at the root level apply to all metrics. Individual metrics can override these by specifying their own values. The `monitor()` method should include both fields in the `common_config` dictionary so they're available to all metric methods.
+
+## 11. Dependencies
+
+**For modules using azure-monitor-querymetrics (must inherit from BaseMonitor):**
+- Inherit from `BaseMonitor` base class
+- Call `super().__init__()` in constructor to initialize base class attributes
+- Use `self.get_credentials()` from base class (do not import from `.azure_auth`)
+- Use `super()._get_metrics_client(location)` from base class for metrics client
+- Use `azure.monitor.querymetrics.MetricsClient` for querying metrics
+- Use `MonitorUtils` from `.utils` for utility functions
+- Use `Metric`, `MetricResult`, and `MetricProblem` from `.checkmk_formatter`
+- Use `build_resource_id` from `.config_validator` or base class method
+
+**For modules using other SDKs (do not inherit from BaseMonitor):**
+- Implement their own authentication and client management
+- Still use `Metric`, `MetricResult`, and `MetricProblem` from `.checkmk_formatter`
+- Still return `MetricResult` from `monitor()` method
+
+## 12. Error Handling
+
+- **Exceptions should propagate** from the `monitor()` method to the caller (`generic_check.py`)
+- Do not catch exceptions in metric execution - let them propagate naturally
+- Print traceback to stderr when `debug=True` before re-raising (optional, for debugging)
+- The `generic_check.py` script handles all exceptions and outputs status 3 (UNKNOWN) with generic error messages
+- **Exception Logging vs. Checkmk Output:**
+  - Exception details (including stack traces, error messages, and context) are logged to files via `ExceptionLogger.log_exception()` for troubleshooting
+  - Exception details are NOT included in Checkmk output to keep output clean and avoid exposing sensitive information
+  - Checkmk output contains only generic error messages (e.g., "Configuration validation error", "Authentication error")
+  - Full exception details are available in log files located in `logs/` directory, organized by service name
+- Error message format: `3 "<service_name>" <error_message>` where:
+  - `<service_name>` is the `service_name` from configuration if available
+  - `<service_name>` is `"Azure Monitor"` if service_name is not available (e.g., configuration loading failed)
+  - `<error_message>` is a generic error message (exception details are logged but not printed)
+- **Raise `UnsupportedMetricTypeError` when metric type is not supported** (do not silently skip) - this exception will be caught by the generic exception handler in `generic_check.py`
+
+## 13. Timing and Performance
+
+- The `debug` parameter controls whether execution times are printed
+- When `debug=True`, each metric execution must be timed individually
+- Execution times should be printed to stderr in format: `Metric '<name>' execution time: <seconds>s`
+- Timing should include the entire metric method execution (including Azure SDK call)
+
+## 14. Azure SDK Call Optimization
+
+- **CRITICAL**: Each metric configuration must result in exactly one Azure SDK call
+- Do not make multiple calls to Azure SDK for the same metric
+- Cache query results within a metric method if needed
+- The breakdown_dict from a single query should be reused for grouping logic

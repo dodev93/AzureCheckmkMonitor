@@ -1,0 +1,24 @@
+{
+  "resource_type": "storage_blob",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<account-name>",
+  "location": "polandcentral",
+  "container_name": "my-container",
+  "metrics": {
+    "file_exists": {
+      "type": "file_existence",
+      "enabled": false,
+      "files": [],
+      "missing_status": "CRIT"
+    },
+    "file_age_hours": {
+      "type": "file_modification",
+      "enabled": false,
+      "files": [],
+      "max_hours_since_modification": 24,
+      "exceeded_status": "CRIT"
+    }
+  }
+}
+

@@ -1,0 +1,53 @@
+{
+  "resource_type": "aks",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<aks-cluster-name>",
+  "location": "<location>",
+  "time_range": "PT1H",
+  "aggregation": "average",
+  "service_name": "Azure AKS - Node Monitoring",
+  "group_by_metadata": "node",
+  "metrics": {
+    "aks_not_ready_nodes": {
+      "type": "not_ready_nodes",
+      "enabled": true,
+      "aggregation": "sum",
+      "warn_threshold": 0,
+      "crit_threshold": 1,
+      "min": 0,
+      "max": null
+    },
+    "aks_node_cpu_percent": {
+      "type": "node_cpu_percent",
+      "enabled": true,
+      "aggregation": "average",
+      "group_by_metadata": "node",
+      "warn_threshold": 80,
+      "crit_threshold": 95,
+      "min": 0,
+      "max": 100
+    },
+    "aks_node_memory_percent": {
+      "type": "node_memory_percent",
+      "enabled": true,
+      "aggregation": "average",
+      "group_by_metadata": "node",
+      "warn_threshold": 85,
+      "crit_threshold": 95,
+      "min": 0,
+      "max": 100
+    },
+    "aks_node_disk_percent": {
+      "type": "node_disk_percent",
+      "enabled": true,
+      "aggregation": "average",
+      "group_by_metadata": "node",
+      "warn_threshold": 80,
+      "crit_threshold": 90,
+      "min": 0,
+      "max": 100
+    }
+  }
+}
+

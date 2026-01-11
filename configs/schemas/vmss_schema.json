@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["resource_type", "subscription_id", "resource_group", "resource_name", "location", "metrics"],
+  "properties": {
+    "resource_type": {
+      "type": "string",
+      "enum": ["vmss"]
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID"
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Resource group name"
+    },
+    "resource_name": {
+      "type": "string",
+      "description": "VM Scale Set name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure location/region"
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "available_memory_percent": {
+          "$ref": "#/definitions/vmssMetricConfig"
+        },
+        "cpu_percent": {
+          "$ref": "#/definitions/vmssMetricConfig"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "vmssMetricConfig": {
+      "type": "object",
+      "required": ["enabled", "time_range", "aggregation", "granularity"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "time_range": {
+          "$ref": "#/definitions/timeRange"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["average", "sum", "count", "min", "max"],
+          "$comment": "Available values: average, sum, count, min, max"
+        },
+        "granularity": {
+          "type": "string",
+          "pattern": "^PT\\d+[MHD]$"
+        },
+        "aggregate_instances": {
+          "type": "boolean"
+        },
+        "warn_threshold": {
+          "type": ["number", "null"]
+        },
+        "crit_threshold": {
+          "type": ["number", "null"]
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeRange": {
+      "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "hours": { "type": "number", "minimum": 0 }
+          },
+          "required": ["hours"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "minutes": { "type": "number", "minimum": 0 }
+          },
+          "required": ["minutes"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "days": { "type": "number", "minimum": 0 }
+          },
+          "required": ["days"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
+

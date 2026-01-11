@@ -1,0 +1,34 @@
+{
+  "resource_type": "storage_account",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<account-name>",
+  "location": "polandcentral",
+  "time_range": "PT1H",
+  "aggregation": "average",
+  "metrics": {
+    "storage_capacity": {
+      "type": "capacity",
+      "enabled": true,
+      "scope": "account",
+      "warn_threshold": 107374182400,
+      "crit_threshold": 214748364800,
+      "min": 0,
+      "max": null
+    },
+    "storage_transactions": {
+      "type": "transactions",
+      "enabled": true,
+      "aggregation": "sum",
+      "scope": "account",
+      "warn_threshold": 1000,
+      "crit_threshold": 5000,
+      "min": 0,
+      "max": null,
+      "group_by_metadata": "ApiName",
+      "metadata_aggregation": "sum",
+      "filter_metadata_values": ["PutEntity", "GetEntity"]
+    }
+  }
+}
+

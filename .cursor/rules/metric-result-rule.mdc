@@ -1,0 +1,105 @@
+---
+alwaysApply: false
+---
+### 1. Result Class Hierarchy
+
+All metric modules must return result as `MetricResult` class.
+
+#### Base Class: `MetricResult`
+- **Location**: Defined in `src/checkmk/checkmk_formatter.py`
+- **Fields**:
+  - `service_name: Optional[str]` - Service name for Checkmk output
+  - `message: str` - Human-readable status message
+  - `status: Union[int, str]` - Status code (0=OK, 1=WARN, 2=CRIT, 3=UNKNOWN, "P"=calculated dynamically)
+  - `metrics: List[Metric]` - List of metrics (can contain one or multiple metrics)
+  - `problems: Optional[List[MetricProblem]]` - List of problematic metadata values that exceed thresholds
+- **Methods**:
+  - `to_service_line_dict() -> Dict[str, Any]` - Convert to service line dictionary format for formatter
+  - `__repr__() -> str` - String representation
+
+#### MetricProblem Class: `MetricProblem`
+- **Location**: Defined in `src/checkmk/checkmk_formatter.py`
+- **Purpose**: Represents a problematic metadata value that exceeds thresholds
+- **Fields**:
+  - `problem_name: str` - The metadata value (e.g., "api-id-1", "PutBlob")
+  - `problem_value: Optional[float]` - The problematic metric value (None if problem_message is used)
+  - `metadata_key: Optional[str]` - The metadata key used (e.g., "ApiId", "OperationName")
+  - `problem_message: Optional[str]` - Human-readable problem message (used when problem_value is None)
+
+#### Metric Class: `Metric`
+- **Location**: Defined in `src/checkmk/checkmk_formatter.py`
+- **Purpose**: Represents a single metric with its value and thresholds
+- **Fields**:
+  - `name: str` - Name of the metric (e.g., 'apim_request_count')
+  - `value: float` - Metric value
+  - `warn_threshold: Optional[float]` - Warning threshold
+  - `crit_threshold: Optional[float]` - Critical threshold
+  - `min_value: Optional[float]` - Minimum value
+  - `max_value: Optional[float]` - Maximum value
+  - `unit: str` - Unit suffix (e.g., '', 'ms', 'B')
+- **Methods**:
+  - `evaluate_status() -> int` - Calculate status based on value and thresholds using `evaluate_status` function
+  - `has_thresholds() -> bool` - Check if this metric has any thresholds defined
+
+### 2. Usage Rules
+
+#### For All Monitor Methods:
+- All monitor methods should return `MetricResult` instance
+- Create `Metric` instances for each metric and add them to the `metrics` list
+- For single metric results, create a `MetricResult` with a list containing one `Metric`
+- For multiple metrics, create a `MetricResult` with a list containing multiple `Metric` instances
+- Calculate overall status across all metrics (worst status wins) and set it in `MetricResult.status`
+- Use `Metric.evaluate_status()` to calculate status for individual metrics
+
+#### For Internal Methods:
+- `identify_problematic_apis_from_breakdown` should return `List[ProblematicApi]` where `ProblematicApi` is a dataclass
+- Replace tuple returns `(api_name, api_id, value, status)` with `ProblematicApi` instances
+
+### 3. CheckmkFormatter Class
+
+- **Location**: Defined in `src/checkmk/checkmk_formatter.py`
+- **Purpose**: Centralized Checkmk formatting functionality
+- **Methods**:
+  - `evaluate_status(value, warn_threshold, crit_threshold) -> int` - Static method to evaluate status
+  - `format_metrics_data(...) -> str` - Static method to format performance data
+  - `format_response_line(...) -> str` - Static method to format a service line
+  - `format_single_response_line(metric_result: MetricResult) -> str` - Static method to format a MetricResult instance
+
+### 4. Example Usage
+
+```python
+from checkmk.checkmk_formatter import Metric, MetricResult
+
+# Single metric example
+metric = Metric(
+    name='apim_request_count',
+    value=100.0,
+    warn_threshold=50.0,
+    crit_threshold=200.0,
+    min_value=None,
+    max_value=None,
+    unit=''
+)
+status = metric.evaluate_status()  # Calculate status for this metric
+result = MetricResult(
+    service_name='APIM Request Count',
+    message='Request count: 100',
+    status=status,
+    metrics=[metric]
+)
+
+# Multiple metrics example
+metrics = [
+    Metric(name='requests_2xx', value=80.0, warn_threshold=None, crit_threshold=None, min_value=None, max_value=None, unit=''),
+    Metric(name='requests_4xx', value=15.0, warn_threshold=10.0, crit_threshold=20.0, min_value=None, max_value=None, unit=''),
+    Metric(name='requests_5xx', value=5.0, warn_threshold=5.0, crit_threshold=10.0, min_value=None, max_value=None, unit='')
+]
+# Calculate overall status (worst wins)
+overall_status = max(metric.evaluate_status() for metric in metrics)
+result = MetricResult(
+    service_name='APIM Requests by Code',
+    message='2xx: 80, 4xx: 15, 5xx: 5',
+    status=overall_status,
+    metrics=metrics
+)
+```

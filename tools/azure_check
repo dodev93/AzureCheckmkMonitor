@@ -1,0 +1,96 @@
+#!/bin/bash
+# Checkmk local check for Azure resources (generic)
+# 
+# Usage: azure_check <config_file_path> [--debug] [--override <json_string>]
+#
+# Parameters:
+#   config_file_path: Path to JSON configuration file (required)
+#   --debug: Optional flag to print execution time for each metric
+#   --override: Optional JSON string to override config fields (e.g., '{"time_range": "PT1H"}')
+
+PYTHON_SCRIPT="src/azurechecks/generic_check.py"
+PYTHON_VENV="venv/bin/python"
+
+# Check if Python script exists
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo '3 "Azure Monitor" Error: Python script not found at '"$PYTHON_SCRIPT"
+    exit 3
+fi
+
+# Check if virtual environment exists
+if [ ! -f "$PYTHON_VENV" ]; then
+    echo '3 "Azure Monitor" Error: Virtual environment not found'
+    exit 3
+fi
+
+# Parse arguments
+CONFIG_FILE=""
+DEBUG_FLAG=""
+OVERRIDE_JSON=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug)
+            DEBUG_FLAG="--debug"
+            shift
+            ;;
+        --override)
+            if [ -z "$2" ]; then
+                echo '3 "Azure Monitor" Error: --override requires a JSON string argument'
+                echo "Usage: azure_check <config_file_path> [--debug] [--override <json_string>]"
+                exit 3
+            fi
+            OVERRIDE_JSON="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$CONFIG_FILE" ]; then
+                CONFIG_FILE="$1"
+            else
+                echo '3 "Azure Monitor" Error: Unknown argument: '"$1"
+                echo "Usage: azure_check <config_file_path> [--debug] [--override <json_string>]"
+                exit 3
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Validate required parameter
+if [ -z "$CONFIG_FILE" ]; then
+    echo '3 "Azure Monitor" Error: Configuration file path is required'
+    echo "Usage: azure_check <config_file_path> [--debug] [--override <json_string>]"
+    exit 3
+fi
+
+# Check if configuration file exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo '3 "Azure Monitor" Error: Configuration file not found: '"$CONFIG_FILE"
+    exit 3
+fi
+
+# Load Azure environment variables if file exists
+AZURE_ENV_FILE="/etc/checkmk/azure.env"
+if [ -f "$AZURE_ENV_FILE" ]; then
+    # set -a  # Automatically export all variables
+    source "$AZURE_ENV_FILE"
+    # set +a  # Stop automatically exporting
+fi
+
+# Build command arguments
+CMD_ARGS=("$CONFIG_FILE")
+
+if [ -n "$DEBUG_FLAG" ]; then
+    CMD_ARGS+=("$DEBUG_FLAG")
+fi
+
+if [ -n "$OVERRIDE_JSON" ]; then
+    CMD_ARGS+=("--override" "$OVERRIDE_JSON")
+fi
+
+# Execute Python script with configuration file and optional flags
+$PYTHON_VENV $PYTHON_SCRIPT "${CMD_ARGS[@]}"
+
+EXIT_CODE=$?
+exit $EXIT_CODE
+

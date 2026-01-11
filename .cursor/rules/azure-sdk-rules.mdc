@@ -1,0 +1,4 @@
+---
+alwaysApply: false
+---
+To load metrics use azure-monitor-querymetrics package. Do not use azure-mgmt-monitor package.

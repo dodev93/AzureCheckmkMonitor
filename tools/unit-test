@@ -1,0 +1,37 @@
+#!/bin/bash
+# Unit test runner script
+# 
+# Usage: unit-test [pytest arguments]
+#
+# Runs unit tests using Python environment from venv directory.
+# All arguments are passed through to pytest.
+
+PYTHON_VENV="venv/bin/python"
+PYTEST_ARGS="$@"
+
+# Check if virtual environment exists
+if [ ! -f "$PYTHON_VENV" ]; then
+    echo '3 "Unit Tests" Error: Virtual environment not found at venv/bin/python'
+    echo "Please create a virtual environment first: python -m venv venv"
+    exit 3
+fi
+
+# Check if pytest is installed
+if ! $PYTHON_VENV -m pytest --version > /dev/null 2>&1; then
+    echo '3 "Unit Tests" Error: pytest is not installed in virtual environment'
+    echo "Please install dependencies: $PYTHON_VENV -m pip install -r requirements.txt"
+    exit 3
+fi
+
+# Run pytest with unit tests
+if [ -z "$PYTEST_ARGS" ]; then
+    # Default: run all unit tests
+    $PYTHON_VENV -m pytest tests/unit/ -v
+else
+    # Pass through all arguments to pytest
+    $PYTHON_VENV -m pytest tests/unit/ $PYTEST_ARGS
+fi
+
+EXIT_CODE=$?
+exit $EXIT_CODE
+

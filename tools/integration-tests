@@ -1,0 +1,50 @@
+#!/bin/bash
+# Integration test runner script
+# 
+# Usage: integration-tests [pytest arguments]
+#
+# Runs integration tests using Python environment from venv directory.
+# All arguments are passed through to pytest.
+#
+# Note: Integration tests require Azure credentials and real resources.
+# Set environment variables:
+#   - AZURE_CLIENT_ID
+#   - AZURE_CLIENT_SECRET
+#   - AZURE_TENANT_ID
+#   - AZURE_SUBSCRIPTION_ID
+
+PYTHON_VENV="venv/bin/python"
+PYTEST_ARGS="$@"
+
+# Check if virtual environment exists
+if [ ! -f "$PYTHON_VENV" ]; then
+    echo '3 "Integration Tests" Error: Virtual environment not found at venv/bin/python'
+    echo "Please create a virtual environment first: python -m venv venv"
+    exit 3
+fi
+
+# Check if pytest is installed
+if ! $PYTHON_VENV -m pytest --version > /dev/null 2>&1; then
+    echo '3 "Integration Tests" Error: pytest is not installed in virtual environment'
+    echo "Please install dependencies: $PYTHON_VENV -m pip install -r requirements.txt"
+    exit 3
+fi
+
+# Check for Azure credentials (warn but don't fail - tests will skip)
+if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_CLIENT_SECRET" ] || [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
+    echo "Warning: Azure credentials not set. Integration tests will be skipped."
+    echo "Set environment variables: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID"
+fi
+
+# Run pytest with integration tests
+if [ -z "$PYTEST_ARGS" ]; then
+    # Default: run all integration tests
+    $PYTHON_VENV -m pytest tests/integration/ -v
+else
+    # Pass through all arguments to pytest
+    $PYTHON_VENV -m pytest tests/integration/ $PYTEST_ARGS
+fi
+
+EXIT_CODE=$?
+exit $EXIT_CODE
+

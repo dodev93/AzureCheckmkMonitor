@@ -1,0 +1,56 @@
+{
+  "resource_type": "apim",
+  "subscription_id": "<sub-id>",
+  "resource_group": "<rg>",
+  "resource_name": "<apim-name>",
+  "location": "polandcentral",
+  "service_name": "<service-name>",
+  "time_range": "PT1H",
+  "aggregation": "sum",
+  "group_by_metadata": "ApiId",
+  "filter_metadata_values": null,
+  "metrics": {
+    "apim_request_count": {
+      "type": "request_count",
+      "enabled": true,
+      "warn_threshold": 100,
+      "crit_threshold": 500,
+      "min": 0,
+      "max": null
+    },
+    "apim_requests_2xx": {
+      "type": "requests_2xx",
+      "enabled": true,
+      "warn_threshold": null,
+      "crit_threshold": null,
+      "min": 0,
+      "max": null
+    },
+    "apim_requests_4xx": {
+      "type": "requests_4xx",
+      "enabled": true,
+      "warn_threshold": 10,
+      "crit_threshold": 50,
+      "min": 0,
+      "max": null
+    },
+    "apim_requests_5xx": {
+      "type": "requests_5xx",
+      "enabled": true,
+      "warn_threshold": 5,
+      "crit_threshold": 20,
+      "min": 0,
+      "max": null
+    },
+    "apim_errors": {
+      "type": "requests_by_codes",
+      "enabled": true,
+      "response_codes": ["200", "201", "404", "500"],
+      "warn_threshold": null,
+      "crit_threshold": null,
+      "min": 0,
+      "max": null
+    }
+  }
+}
+
